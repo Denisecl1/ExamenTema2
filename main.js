@@ -1,14 +1,15 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // ================= ESCENA =================
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
-scene.fog = new THREE.Fog(0x000000, 10, 50);
+scene.fog = new THREE.Fog(0x000000, 10, 60);
 
 // ================= CÁMARA =================
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 2, 4);
+camera.position.set(0, 3, 8);
 camera.lookAt(0, 1, 0);
 
 // ================= RENDER =================
@@ -21,27 +22,37 @@ document.body.appendChild(renderer.domElement);
 scene.add(new THREE.AmbientLight(0xffffff, 0.8));
 
 const light = new THREE.DirectionalLight(0xffffff, 1.5);
-light.position.set(5, 10, 5);
+light.position.set(10, 15, 10);
 light.castShadow = true;
 scene.add(light);
 
-// ================= SUELO =================
-const floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(20, 20),
-    new THREE.MeshStandardMaterial({ color: 0x333333 })
-);
-floor.rotation.x = -Math.PI / 2;
-floor.receiveShadow = true;
-scene.add(floor);
+// ================= ESCENARIO (GLB) =================
+const gltfLoader = new GLTFLoader();
+
+gltfLoader.load('Textura/baseball_base.glb', (gltf) => {
+    const escenario = gltf.scene;
+
+    escenario.scale.set(1, 1, 1);
+    escenario.position.set(0, 0, 0);
+
+    escenario.traverse((child) => {
+        if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+        }
+    });
+
+    scene.add(escenario);
+});
 
 // ================= PERSONAJE =================
 let personaje, mixer;
 let actions = {};
 let activeAction;
 
-const loader = new FBXLoader();
+const fbxLoader = new FBXLoader();
 
-loader.load('models/Idle.fbx', (object) => {
+fbxLoader.load('models/Idle.fbx', (object) => {
     personaje = object;
 
     personaje.scale.setScalar(0.02);
@@ -54,7 +65,6 @@ loader.load('models/Idle.fbx', (object) => {
             child.material.transparent = false;
             child.material.opacity = 1;
             child.material.depthWrite = true;
-            child.material.side = THREE.FrontSide;
         }
     });
 
@@ -74,7 +84,7 @@ loader.load('models/Idle.fbx', (object) => {
 
 // ================= ANIMACIONES =================
 function loadAnim(name, path) {
-    loader.load(path, (anim) => {
+    fbxLoader.load(path, (anim) => {
         const action = mixer.clipAction(anim.animations[0]);
         actions[name] = action;
     });
@@ -93,12 +103,11 @@ const keys = {};
 window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
 window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
-// ================= SISTEMA DE SWING (PRO) =================
+// ================= SWING =================
 let isSwinging = false;
 let swingTime = 0;
 const swingDuration = 0.5;
 
-// CLICK DEL MOUSE
 window.addEventListener('mousedown', () => {
     if (!isSwinging) {
         isSwinging = true;
@@ -112,26 +121,25 @@ const ball = new THREE.Mesh(
     new THREE.SphereGeometry(0.2, 16, 16),
     new THREE.MeshStandardMaterial({ color: 0xffffff })
 );
+ball.castShadow = true;
 scene.add(ball);
 
 let score = 0;
 
 function resetBall() {
-    ball.position.set(Math.random() * 4 - 2, 1, -12);
+    ball.position.set(Math.random() * 4 - 2, 1, -15);
 }
 resetBall();
 
-// ================= DETECCIÓN DE GOLPE =================
+// ================= HIT =================
 function checkHit() {
     const distance = personaje.position.distanceTo(ball.position);
 
     if (distance < 1.5 && ball.position.z > -1 && ball.position.z < 2) {
-
         score++;
         document.getElementById('score').innerText = "Score: " + score;
 
-        // efecto golpe
-        ball.position.z = -15;
+        ball.position.z = -20;
         ball.position.y = 2;
     }
 }
@@ -144,7 +152,6 @@ function update(delta) {
 
     let moving = false;
 
-    // Movimiento lateral
     if (keys['a'] || keys['arrowleft']) {
         personaje.position.x -= 5 * delta;
         setAction('left');
@@ -156,16 +163,13 @@ function update(delta) {
         moving = true;
     }
 
-    // 🔥 SISTEMA DE SWING CON TIMING
     if (isSwinging) {
         swingTime += delta;
 
-        // ventana de golpe
         if (swingTime > 0.2 && swingTime < 0.3) {
             checkHit();
         }
 
-        // terminar swing
         if (swingTime >= swingDuration) {
             isSwinging = false;
             setAction('idle');
@@ -175,7 +179,7 @@ function update(delta) {
         setAction('idle');
     }
 
-    // Movimiento pelota
+    // movimiento pelota
     ball.position.z += 10 * delta;
 
     if (ball.position.z > 6) {
