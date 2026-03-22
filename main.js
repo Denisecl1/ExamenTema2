@@ -17,7 +17,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
 
-// ================= ILUMINACIÓN =================
+// ================= LUCES =================
 scene.add(new THREE.AmbientLight(0xffffff, 0.8));
 
 const light = new THREE.DirectionalLight(0xffffff, 1.5);
@@ -47,12 +47,10 @@ loader.load('models/Idle.fbx', (object) => {
     personaje.scale.setScalar(0.02);
     personaje.position.set(0, 0, 0);
 
-    // 🔥 ARREGLO TRANSPARENCIA
     personaje.traverse(child => {
         if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
-
             child.material.transparent = false;
             child.material.opacity = 1;
             child.material.depthWrite = true;
@@ -64,12 +62,10 @@ loader.load('models/Idle.fbx', (object) => {
 
     mixer = new THREE.AnimationMixer(personaje);
 
-    // Animación base
     actions.idle = mixer.clipAction(personaje.animations[0]);
     activeAction = actions.idle;
     activeAction.play();
 
-    // Cargar animaciones
     loadAnim('left', 'models/Walk Left.fbx');
     loadAnim('right', 'models/Walk Right.fbx');
     loadAnim('swing', 'models/Baseball Swing.fbx');
@@ -97,15 +93,18 @@ const keys = {};
 window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
 window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
-// 🔥 CONTROL CON MOUSE PARA BATEO
+// ================= SISTEMA DE SWING (PRO) =================
 let isSwinging = false;
+let swingTime = 0;
+const swingDuration = 0.5;
 
+// CLICK DEL MOUSE
 window.addEventListener('mousedown', () => {
-    isSwinging = true;
-});
-
-window.addEventListener('mouseup', () => {
-    isSwinging = false;
+    if (!isSwinging) {
+        isSwinging = true;
+        swingTime = 0;
+        setAction('swing');
+    }
 });
 
 // ================= PELOTA =================
@@ -121,6 +120,21 @@ function resetBall() {
     ball.position.set(Math.random() * 4 - 2, 1, -12);
 }
 resetBall();
+
+// ================= DETECCIÓN DE GOLPE =================
+function checkHit() {
+    const distance = personaje.position.distanceTo(ball.position);
+
+    if (distance < 1.5 && ball.position.z > -1 && ball.position.z < 2) {
+
+        score++;
+        document.getElementById('score').innerText = "Score: " + score;
+
+        // efecto golpe
+        ball.position.z = -15;
+        ball.position.y = 2;
+    }
+}
 
 // ================= LÓGICA =================
 const clock = new THREE.Clock();
@@ -142,29 +156,28 @@ function update(delta) {
         moving = true;
     }
 
-    // 🔥 BATEO CON CLICK
+    // 🔥 SISTEMA DE SWING CON TIMING
     if (isSwinging) {
-        setAction('swing');
+        swingTime += delta;
 
-        const distance = personaje.position.distanceTo(ball.position);
+        // ventana de golpe
+        if (swingTime > 0.2 && swingTime < 0.3) {
+            checkHit();
+        }
 
-        if (distance < 1.5) {
-            score++;
-            document.getElementById('score').innerText = "Score: " + score;
-
-            // efecto golpe
-            ball.position.z = -15;
-            ball.position.y = 2;
+        // terminar swing
+        if (swingTime >= swingDuration) {
+            isSwinging = false;
+            setAction('idle');
         }
     }
     else if (!moving) {
         setAction('idle');
     }
 
-    // Movimiento pelota hacia jugador
+    // Movimiento pelota
     ball.position.z += 10 * delta;
 
-    // Reinicio si pasa
     if (ball.position.z > 6) {
         resetBall();
     }
