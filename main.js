@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // ================= ESCENA =================
 const scene = new THREE.Scene();
@@ -9,14 +10,20 @@ scene.fog = new THREE.Fog(0x000000, 10, 60);
 
 // ================= CÁMARA =================
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 3, 8);
-camera.lookAt(0, 1, 0);
+
+// 📍 cámara tipo entrenamiento (vista detrás del bateador)
+camera.position.set(0, 3, 6);
 
 // ================= RENDER =================
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
+
+// ================= CONTROLES =================
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.target.set(0, 1, 0); // mira al jugador
 
 // ================= LUCES =================
 scene.add(new THREE.AmbientLight(0xffffff, 0.8));
@@ -26,14 +33,24 @@ light.position.set(10, 15, 10);
 light.castShadow = true;
 scene.add(light);
 
-// ================= ESCENARIO (GLB) =================
+scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
+
+// ================= ESCENARIO =================
 const gltfLoader = new GLTFLoader();
 
-gltfLoader.load('Textura/baseball_base.glb', (gltf) => {
-    const escenario = gltf.scene;
+let escenario;
 
-    escenario.scale.set(1, 1, 1);
-    escenario.position.set(0, 0, 0);
+gltfLoader.load('./Textura/baseball_base.glb', (gltf) => {
+
+    escenario = gltf.scene;
+
+    escenario.scale.set(0.01, 0.01, 0.01);
+
+    // 📍 centramos el campo
+    escenario.position.set(0, -1, 0);
+
+    // 🔥 ROTACIÓN correcta del campo (ajustada)
+    escenario.rotation.y = Math.PI;
 
     escenario.traverse((child) => {
         if (child.isMesh) {
@@ -53,10 +70,16 @@ let activeAction;
 const fbxLoader = new FBXLoader();
 
 fbxLoader.load('models/Idle.fbx', (object) => {
+
     personaje = object;
 
     personaje.scale.setScalar(0.02);
-    personaje.position.set(0, 0, 0);
+
+    // 📍 HOME PLATE (posición ideal)
+   personaje.position.set(8.5, -1, 2.5);// 6 enfrente o atras 
+
+    // 🔥 mirar hacia el pitcher
+    personaje.rotation.y = -Math.PI / 2;
 
     personaje.traverse(child => {
         if (child.isMesh) {
@@ -64,7 +87,6 @@ fbxLoader.load('models/Idle.fbx', (object) => {
             child.receiveShadow = true;
             child.material.transparent = false;
             child.material.opacity = 1;
-            child.material.depthWrite = true;
         }
     });
 
@@ -106,7 +128,6 @@ window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 // ================= SWING =================
 let isSwinging = false;
 let swingTime = 0;
-const swingDuration = 0.5;
 
 window.addEventListener('mousedown', () => {
     if (!isSwinging) {
@@ -121,25 +142,31 @@ const ball = new THREE.Mesh(
     new THREE.SphereGeometry(0.2, 16, 16),
     new THREE.MeshStandardMaterial({ color: 0xffffff })
 );
+
 ball.castShadow = true;
 scene.add(ball);
 
 let score = 0;
 
 function resetBall() {
-    ball.position.set(Math.random() * 4 - 2, 1, -15);
+    // 📍 viene del pitcher
+    ball.position.set(0, 1.2, -6);
 }
 resetBall();
 
 // ================= HIT =================
 function checkHit() {
+    if (!personaje) return;
+
     const distance = personaje.position.distanceTo(ball.position);
 
-    if (distance < 1.5 && ball.position.z > -1 && ball.position.z < 2) {
+    // 🎯 zona de impacto (zona de strike)
+    if (distance < 1.5 && ball.position.z > 0 && ball.position.z < 2.5) {
         score++;
         document.getElementById('score').innerText = "Score: " + score;
 
-        ball.position.z = -20;
+        // 💥 efecto hit
+        ball.position.z = -8;
         ball.position.y = 2;
     }
 }
@@ -148,21 +175,24 @@ function checkHit() {
 const clock = new THREE.Clock();
 
 function update(delta) {
+
     if (!personaje) return;
 
     let moving = false;
 
+    // movimiento lateral
     if (keys['a'] || keys['arrowleft']) {
-        personaje.position.x -= 5 * delta;
+        personaje.position.x -= 4 * delta;
         setAction('left');
         moving = true;
     }
     else if (keys['d'] || keys['arrowright']) {
-        personaje.position.x += 5 * delta;
+        personaje.position.x += 4 * delta;
         setAction('right');
         moving = true;
     }
 
+    // swing
     if (isSwinging) {
         swingTime += delta;
 
@@ -170,7 +200,7 @@ function update(delta) {
             checkHit();
         }
 
-        if (swingTime >= swingDuration) {
+        if (swingTime > 0.5) {
             isSwinging = false;
             setAction('idle');
         }
@@ -179,16 +209,17 @@ function update(delta) {
         setAction('idle');
     }
 
-    // movimiento pelota
-    ball.position.z += 10 * delta;
+    // pelota viene hacia el jugador
+    ball.position.z += 7 * delta;
 
-    if (ball.position.z > 6) {
+    if (ball.position.z > 5) {
         resetBall();
     }
 }
 
 // ================= LOOP =================
 function animate() {
+
     requestAnimationFrame(animate);
 
     const delta = clock.getDelta();
@@ -196,6 +227,8 @@ function animate() {
     if (mixer) mixer.update(delta);
 
     update(delta);
+
+    controls.update();
 
     renderer.render(scene, camera);
 }
