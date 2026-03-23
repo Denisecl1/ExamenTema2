@@ -10,9 +10,7 @@ scene.fog = new THREE.Fog(0x000000, 10, 60);
 
 // ================= CÁMARA =================
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-
-// 📍 cámara tipo entrenamiento (vista detrás del bateador)
-camera.position.set(0, 3, 6);
+camera.position.set(12, 3, 6);
 
 // ================= RENDER =================
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -20,10 +18,13 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
 
-// ================= CONTROLES =================
+// ================= CONTROLES DE CÁMARA =================
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-controls.target.set(0, 1, 0); // mira al jugador
+controls.enablePan = false;
+controls.maxPolarAngle = Math.PI / 2.1;
+controls.minDistance = 4;
+controls.maxDistance = 10;
 
 // ================= LUCES =================
 scene.add(new THREE.AmbientLight(0xffffff, 0.8));
@@ -38,18 +39,11 @@ scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
 // ================= ESCENARIO =================
 const gltfLoader = new GLTFLoader();
 
-let escenario;
-
 gltfLoader.load('./Textura/baseball_base.glb', (gltf) => {
-
-    escenario = gltf.scene;
+    const escenario = gltf.scene;
 
     escenario.scale.set(0.01, 0.01, 0.01);
-
-    // 📍 centramos el campo
     escenario.position.set(0, -1, 0);
-
-    // 🔥 ROTACIÓN correcta del campo (ajustada)
     escenario.rotation.y = Math.PI;
 
     escenario.traverse((child) => {
@@ -72,13 +66,11 @@ const fbxLoader = new FBXLoader();
 fbxLoader.load('models/Idle.fbx', (object) => {
 
     personaje = object;
-
     personaje.scale.setScalar(0.02);
 
-    // 📍 HOME PLATE (posición ideal)
-   personaje.position.set(8.5, -1, 2.5);// 6 enfrente o atras 
+    personaje.position.set(8.5, -1, 2.5);
 
-    // 🔥 mirar hacia el pitcher
+    // mira hacia el pitcher (hacia -X)
     personaje.rotation.y = -Math.PI / 2;
 
     personaje.traverse(child => {
@@ -101,7 +93,9 @@ fbxLoader.load('models/Idle.fbx', (object) => {
     loadAnim('left', 'models/Walk Left.fbx');
     loadAnim('right', 'models/Walk Right.fbx');
     loadAnim('swing', 'models/Baseball Swing.fbx');
-    loadAnim('dance', 'models/Dance.fbx');
+    
+    // Inicia la pelota una vez que el personaje ya existe
+    resetBall();
 });
 
 // ================= ANIMACIONES =================
@@ -120,7 +114,7 @@ function setAction(name) {
     activeAction.reset().fadeIn(0.2).play();
 }
 
-// ================= CONTROLES =================
+// ================= CONTROLES DE TECLADO =================
 const keys = {};
 window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
 window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
@@ -148,30 +142,34 @@ scene.add(ball);
 
 let score = 0;
 
+// 🔥 colocar pelota ENFRENTE (pitcher)
 function resetBall() {
-    // 📍 viene del pitcher
-    ball.position.set(0, 1.2, -6);
+    if (!personaje) return;
+
+    // Aparece frente al jugador (lado pitcher, eje -X)
+    ball.position.set(
+        personaje.position.x - 15, // Viene desde lejos en el eje negativo
+        1.2,
+        personaje.position.z // Sigue al jugador lateralmente
+    );
 }
-resetBall();
 
 // ================= HIT =================
 function checkHit() {
-    if (!personaje) return;
-
     const distance = personaje.position.distanceTo(ball.position);
 
-    // 🎯 zona de impacto (zona de strike)
-    if (distance < 1.5 && ball.position.z > 0 && ball.position.z < 2.5) {
+    // Rango de bateo ajustado
+    if (distance < 2.0) { 
         score++;
-        document.getElementById('score').innerText = "Score: " + score;
-
-        // 💥 efecto hit
-        ball.position.z = -8;
-        ball.position.y = 2;
+        const scoreElement = document.getElementById('score');
+        if (scoreElement) {
+            scoreElement.innerText = "Score: " + score;
+        }
+        resetBall();
     }
 }
 
-// ================= LÓGICA =================
+// ================= LÓGICA DE ACTUALIZACIÓN =================
 const clock = new THREE.Clock();
 
 function update(delta) {
@@ -180,27 +178,29 @@ function update(delta) {
 
     let moving = false;
 
-    // movimiento lateral
+    // Movimiento lateral (sobre el eje Z porque está rotado)
     if (keys['a'] || keys['arrowleft']) {
-        personaje.position.x -= 4 * delta;
+        personaje.position.z += 4 * delta;
         setAction('left');
         moving = true;
     }
     else if (keys['d'] || keys['arrowright']) {
-        personaje.position.x += 4 * delta;
+        personaje.position.z -= 4 * delta;
         setAction('right');
         moving = true;
     }
 
-    // swing
+    // Lógica del Swing
     if (isSwinging) {
         swingTime += delta;
 
-        if (swingTime > 0.2 && swingTime < 0.3) {
+        // Ventana de tiempo donde el bate golpea la pelota
+        if (swingTime > 0.15 && swingTime < 0.35) {
             checkHit();
         }
 
-        if (swingTime > 0.5) {
+        // Termina la animación de swing
+        if (swingTime > 0.6) { 
             isSwinging = false;
             setAction('idle');
         }
@@ -209,17 +209,24 @@ function update(delta) {
         setAction('idle');
     }
 
-    // pelota viene hacia el jugador
-    ball.position.z += 7 * delta;
+    // 🔥 mover pelota HACIA el jugador (hacia +X)
+    ball.position.x += 12 * delta;
 
-    if (ball.position.z > 5) {
+    // Si la pelota pasa al jugador (su X es mayor que la del personaje)
+    if (ball.position.x > personaje.position.x + 2) {
         resetBall();
     }
+
+    // La cámara persigue al jugador
+    camera.position.x = personaje.position.x + 5;
+    camera.position.y = personaje.position.y + 4;
+    camera.position.z = personaje.position.z;
+
+    controls.target.copy(personaje.position);
 }
 
-// ================= LOOP =================
+// ================= LOOP DE RENDERIZADO =================
 function animate() {
-
     requestAnimationFrame(animate);
 
     const delta = clock.getDelta();
@@ -229,12 +236,11 @@ function animate() {
     update(delta);
 
     controls.update();
-
     renderer.render(scene, camera);
 }
 animate();
 
-// ================= RESIZE =================
+// ================= AJUSTE DE VENTANA (RESIZE) =================
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
