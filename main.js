@@ -3,26 +3,51 @@ import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-// ================= VARIABLES DEL JUEGO (NIVELES) =================
+// ================= VARIABLES DEL JUEGO =================
 let score = 0;
 let nivel = 1;
 let fallos = 0;
 let pelotasLanzadas = 0;
 
-const MAX_FALLOS = 3;   // Pierdes al fallar 3 veces
-const MAX_PELOTAS = 10; // Avanzas de nivel cada 10 pelotas
-let velocidadPelota = 12; // La velocidad inicial de la pelota
+const MAX_FALLOS = 3;
+const MAX_PELOTAS = 10;
+let velocidadPelota = 12;
 
 let juegoActivo = false; 
-let esGameOver = false; // NUEVO: Para saber si perdimos o pasamos de nivel
+let esGameOver = false;
+let isDancing = false; 
 
-// ================= ESCENA, CÁMARA Y RENDER =================
+// ================= ESCENA Y CÁMARA =================
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 scene.fog = new THREE.Fog(0x000000, 10, 60);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(12, 3, 6);
+
+// ================= SONIDOS =================
+const listener = new THREE.AudioListener();
+camera.add(listener);
+
+const audioLoader = new THREE.AudioLoader();
+
+const sonidoBateo = new THREE.Audio(listener);
+audioLoader.load('sonido/bateo.mp3', function(buffer) {
+    sonidoBateo.setBuffer(buffer);
+    sonidoBateo.setVolume(0.8);
+});
+
+const sonidoFinJuego = new THREE.Audio(listener);
+audioLoader.load('sonido/fin de juego.mp3', function(buffer) {
+    sonidoFinJuego.setBuffer(buffer);
+    sonidoFinJuego.setVolume(1.0);
+});
+
+const sonidoGameOver = new THREE.Audio(listener);
+audioLoader.load('sonido/gameover.mp3', function(buffer) {
+    sonidoGameOver.setBuffer(buffer);
+    sonidoGameOver.setVolume(1.0);
+});
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -34,7 +59,7 @@ controls.enableDamping = true;
 controls.enablePan = false;
 controls.maxPolarAngle = Math.PI / 2.1;
 controls.minDistance = 4;
-controls.maxDistance = 10;
+controls.maxDistance = 15; // Dejamos que se aleje un poco más
 
 // ================= LUCES =================
 scene.add(new THREE.AmbientLight(0xffffff, 0.8));
@@ -44,7 +69,7 @@ light.castShadow = true;
 scene.add(light);
 scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
 
-// ================= ESCENARIO Y MÁQUINA =================
+// ================= ESCENARIO =================
 const gltfLoader = new GLTFLoader();
 
 gltfLoader.load('./Textura/baseball_base.glb', (gltf) => {
@@ -100,6 +125,7 @@ fbxLoader.load('models/Idle.fbx', (object) => {
     loadAnim('left', 'models/Walk Left.fbx');
     loadAnim('right', 'models/Walk Right.fbx');
     loadAnim('swing', 'models/Baseball Swing.fbx');
+    loadAnim('dance', 'models/Dance.fbx'); 
     
     resetBall();
 });
@@ -117,7 +143,7 @@ function setAction(name) {
     activeAction.reset().fadeIn(0.2).play();
 }
 
-// ================= CONTROLES =================
+// ================= CONTROLES Y PAUSAS =================
 const keys = {};
 window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
 window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
@@ -131,6 +157,23 @@ window.addEventListener('mousedown', () => {
         swingTime = 0;
         setAction('swing');
     }
+});
+
+// 🔥 PAUSA DE INSTRUCCIONES
+const btnInstrucciones = document.getElementById('btnInstrucciones');
+const instruccionesModal = document.getElementById('instruccionesModal');
+const cerrarInstrucciones = document.getElementById('cerrarInstrucciones');
+let estadoAnterior = false; // Guarda si el juego estaba activo antes de pausar
+
+btnInstrucciones.addEventListener('click', () => {
+    instruccionesModal.classList.remove('modal-oculto');
+    estadoAnterior = juegoActivo; 
+    juegoActivo = false; // Detiene la pelota y el personaje
+});
+
+cerrarInstrucciones.addEventListener('click', () => {
+    instruccionesModal.classList.add('modal-oculto');
+    juegoActivo = estadoAnterior; // Reanuda si estabas jugando
 });
 
 // ================= PELOTA Y FÍSICA =================
@@ -151,33 +194,33 @@ function resetBall() {
     ball.position.set(personaje.position.x - 15, 1.2, personaje.position.z);
 }
 
-// ================= EVENTO DE PANTALLA DE INICIO =================
+// ================= EVENTO DE INICIO =================
 const pantallaInicio = document.getElementById('pantallaInicio');
 const botonIniciar = document.getElementById('botonIniciar');
 
 botonIniciar.addEventListener('click', () => {
-    pantallaInicio.classList.add('oculto'); // Oculta la pantalla de inicio
-    juegoActivo = true; // Activa las mecánicas
-    resetBall(); // Lanza la primera bola
+    pantallaInicio.classList.add('oculto');
+    juegoActivo = true;
+    resetBall();
+
+    if (sonidoBateo.context.state === 'suspended') sonidoBateo.context.resume();
 });
 
-// ================= LÓGICA DE NIVELES Y MODAL =================
+// ================= LÓGICA DE NIVELES =================
 const modal = document.getElementById('gameModal');
 const modalTitulo = document.getElementById('modalTitulo');
 const modalMensaje = document.getElementById('modalMensaje');
 const modalBoton = document.getElementById('modalBoton');
-const modalContenido = document.querySelector('.modal-contenido');
+const modalContenido = modal.querySelector('.modal-contenido');
 
 modalBoton.addEventListener('click', () => {
-    modal.classList.add('modal-oculto'); // Ocultar ventana emergente
+    modal.classList.add('modal-oculto');
+    isDancing = false;
+    setAction('idle'); 
     
-    // NUEVO: Verificamos si habíamos perdido
     if (esGameOver) {
-        // Mostramos de nuevo la pantalla de PLAY inicial
         pantallaInicio.classList.remove('oculto');
-        // No activamos el juego aquí, de eso se encarga la tarjeta PLAY
     } else {
-        // Si solo pasamos de nivel, el juego sigue sin pausas
         juegoActivo = true;                  
         resetBall();                         
     }
@@ -193,10 +236,12 @@ function actualizarHUD() {
 }
 
 function verificarEstadoJuego() {
-    // Si perdemos...
     if (fallos >= MAX_FALLOS) {
         juegoActivo = false;
-        esGameOver = true; // Marcamos que el modal es por Game Over
+        esGameOver = true;
+        
+        if (sonidoGameOver.isPlaying) sonidoGameOver.stop();
+        sonidoGameOver.play();
         
         modalContenido.classList.add('modal-game-over');
         modalTitulo.innerText = "¡GAME OVER!";
@@ -205,29 +250,34 @@ function verificarEstadoJuego() {
         
         modal.classList.remove('modal-oculto');
         
-        // Reiniciar variables para la siguiente partida
         nivel = 1;
         score = 0;
         fallos = 0;
         pelotasLanzadas = 0;
         velocidadPelota = 12; 
     } 
-    // Si ganamos el nivel...
     else if (pelotasLanzadas >= MAX_PELOTAS) {
         juegoActivo = false;
-        esGameOver = false; // Marcamos que el modal es por Nivel Superado
+        esGameOver = false;
         
-        nivel++;
-        velocidadPelota += 4; 
-        pelotasLanzadas = 0;
-        fallos = 0; 
-        
-        modalContenido.classList.remove('modal-game-over');
-        modalTitulo.innerText = "¡NIVEL COMPLETADO!";
-        modalMensaje.innerText = `Avanzas al Nivel ${nivel}.\n¡Prepárate, la máquina lanzará más rápido!`;
-        modalBoton.innerText = "Siguiente Nivel";
-        
-        modal.classList.remove('modal-oculto');
+        isDancing = true; 
+        setAction('dance');
+        if (sonidoFinJuego.isPlaying) sonidoFinJuego.stop();
+        sonidoFinJuego.play();
+
+        setTimeout(() => {
+            nivel++;
+            velocidadPelota += 4; 
+            pelotasLanzadas = 0;
+            fallos = 0; 
+            
+            modalContenido.classList.remove('modal-game-over');
+            modalTitulo.innerText = "¡NIVEL COMPLETADO!";
+            modalMensaje.innerText = `Avanzas al Nivel ${nivel}.\n¡Prepárate, la máquina lanzará más rápido!`;
+            modalBoton.innerText = "Siguiente Nivel";
+            
+            modal.classList.remove('modal-oculto');
+        }, 3500); 
     } 
     else {
         resetBall();
@@ -261,6 +311,9 @@ function checkHit() {
         score++;
         actualizarHUD(); 
         
+        if (sonidoBateo.isPlaying) sonidoBateo.stop();
+        sonidoBateo.play();
+
         ballHit = true;
         ballVelocity.x = - (15 + Math.random() * 10); 
         ballVelocity.y = 8 + Math.random() * 5;      
@@ -268,7 +321,7 @@ function checkHit() {
     }
 }
 
-// ================= LÓGICA DE ACTUALIZACIÓN =================
+// ================= UPDATE =================
 const clock = new THREE.Clock();
 
 function update(delta) {
@@ -288,7 +341,10 @@ function update(delta) {
         }
     }
 
-    if (isSwinging) {
+    if (isDancing) {
+        // No hacer nada
+    } 
+    else if (isSwinging) {
         swingTime += delta;
         if (swingTime > 0.15 && swingTime < 0.35) {
             checkHit();
@@ -330,10 +386,16 @@ function update(delta) {
         }
     }
 
-    camera.position.x = personaje.position.x + 5;
-    camera.position.y = personaje.position.y + 4;
+    // 🔥 MODIFICACIÓN DE CÁMARA PARA VER LA MÁQUINA
+    // Alejamos la cámara en X y la subimos en Y
+    camera.position.x = personaje.position.x + 9; 
+    camera.position.y = personaje.position.y + 4.5;
     camera.position.z = personaje.position.z;
-    controls.target.copy(personaje.position);
+    
+    // Le decimos a la cámara que mire un poco hacia adelante (hacia la máquina)
+    controls.target.set(personaje.position.x - 5, personaje.position.y + 1, personaje.position.z);
+    
+    controls.update();
 }
 
 // ================= LOOP =================
@@ -342,7 +404,6 @@ function animate() {
     const delta = clock.getDelta();
     if (mixer) mixer.update(delta);
     update(delta);
-    controls.update();
     renderer.render(scene, camera);
 }
 animate();

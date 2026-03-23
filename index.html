@@ -12,7 +12,7 @@
         /* DISEÑO DEL PANEL (HUD) */
         #hud {
             position: absolute;
-            top: 20px;
+            top: 80px; 
             left: 20px;
             color: white;
             font-family: Arial, sans-serif;
@@ -29,7 +29,7 @@
         #hud span { font-weight: bold; color: #4CAF50; }
         .hud-rojo { color: #ff4444 !important; }
 
-        /* ================= NUEVA PANTALLA DE INICIO ================= */
+        /* ================= PANTALLA DE INICIO ================= */
         #pantallaInicio {
             position: absolute;
             top: 0;
@@ -40,41 +40,47 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 200; /* Por encima de todo */
+            z-index: 200; 
             backdrop-filter: blur(8px);
         }
 
-        /* Convertimos tu tarjeta en un botón interactivo */
         .card {
             cursor: pointer;
             transition: transform 0.2s ease;
         }
 
-        .card:hover {
-            transform: scale(1.05); /* Efecto de zoom al pasar el mouse */
+        .card:hover { transform: scale(1.05); }
+        .card:active { transform: scale(0.95); }
+        .oculto { display: none !important; }
+        
+        .texto-play {
+            color: #bd9f67;
+            font-size: 26px;
+            font-weight: 900;
+            font-family: 'Arial Black', Arial, sans-serif;
+            line-height: 35px;
+            letter-spacing: 8px;
+            white-space: nowrap;
+            position: absolute;
+            left: 6px;
         }
-
-        .card:active {
-            transform: scale(0.95);
-        }
-
-        .oculto {
-            display: none !important;
-        }
-
-      
     </style>
 </head>
 <body>
+
+    <nav id="navbar">
+        <div class="nav-logo">⚾ Simulador de Bateo</div>
+        <div class="nav-links">
+            <button id="btnInstrucciones">📖 Cómo Jugar</button>
+        </div>
+    </nav>
 
     <div id="pantallaInicio">
         <div class="card" id="botonIniciar">
             <div class="border"></div>
             <div class="content">
               <div class="logo">
-                
                 <div class="texto-play">PLAY</div>
-                
                 <span class="trail"></span>
               </div>
               <span class="logo-bottom-text">Game</span>
@@ -90,6 +96,19 @@
         <div>PELOTAS: <span id="pelotas">0</span> / 10</div>
     </div>
 
+    <div id="instruccionesModal" class="modal-oculto">
+        <div class="modal-contenido modal-instrucciones">
+            <h2>CÓMO JUGAR</h2>
+            <ul class="lista-instrucciones">
+                <li>⬅️ ➡️ Usa las teclas <b>A</b> y <b>D</b> para moverte a los lados.</li>
+                <li>🖱️ Haz <b>Clic Izquierdo</b> en el momento justo para batear.</li>
+                <li>⚠️ Si dejas pasar la pelota o te golpea, sumas un <b>Fallo</b>.</li>
+                <li>❌ A los 3 fallos pierdes el juego.</li>
+            </ul>
+            <button id="cerrarInstrucciones">¡Entendido!</button>
+        </div>
+    </div>
+
     <div id="gameModal" class="modal-oculto">
         <div class="modal-contenido">
             <h1 id="modalTitulo">TÍTULO</h1>
@@ -97,6 +116,10 @@
             <button id="modalBoton">Continuar</button>
         </div>
     </div>
+
+    <footer id="footer">
+        <p>Desarrollado por Diana Denise Campos Lozano | Ingeniería en TIC</p>
+    </footer>
 
     <script type="importmap">
     {
