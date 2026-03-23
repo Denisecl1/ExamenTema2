@@ -149,7 +149,22 @@ function resetBall() {
     ball.position.set(personaje.position.x - 15, 1.2, personaje.position.z);
 }
 
-// ================= LÓGICA DE NIVELES =================
+// ================= LÓGICA DE NIVELES Y MODAL =================
+
+// Referencias al Modal en el HTML
+const modal = document.getElementById('gameModal');
+const modalTitulo = document.getElementById('modalTitulo');
+const modalMensaje = document.getElementById('modalMensaje');
+const modalBoton = document.getElementById('modalBoton');
+const modalContenido = document.querySelector('.modal-contenido');
+
+// Evento del botón del Modal para reiniciar/continuar
+modalBoton.addEventListener('click', () => {
+    modal.classList.add('modal-oculto'); // Ocultar ventana
+    juegoActivo = true;                  // Reactivar controles
+    actualizarHUD();                     // Refrescar textos en pantalla
+    resetBall();                         // Lanzar nueva pelota
+});
 
 function actualizarHUD() {
     document.getElementById('nivel').innerText = nivel;
@@ -162,18 +177,22 @@ function verificarEstadoJuego() {
     // Si perdemos...
     if (fallos >= MAX_FALLOS) {
         juegoActivo = false;
-        alert(`¡GAME OVER! 🔴\n\nLlegaste al Nivel: ${nivel}\nTu Score: ${score}\n\nPresiona Aceptar para reiniciar.`);
         
-        // Reiniciar variables a cero
+        // Diseño rojo para Game Over
+        modalContenido.classList.add('modal-game-over');
+        modalTitulo.innerText = "¡GAME OVER!";
+        modalMensaje.innerText = `Llegaste al Nivel: ${nivel}\nTu Score Final: ${score}`;
+        modalBoton.innerText = "Reintentar";
+        
+        // Mostrar modal
+        modal.classList.remove('modal-oculto');
+        
+        // Reiniciar variables para la siguiente partida
         nivel = 1;
         score = 0;
         fallos = 0;
         pelotasLanzadas = 0;
         velocidadPelota = 12; // Volver a velocidad normal
-        juegoActivo = true;
-        
-        actualizarHUD();
-        resetBall();
     } 
     // Si ganamos el nivel...
     else if (pelotasLanzadas >= MAX_PELOTAS) {
@@ -183,11 +202,14 @@ function verificarEstadoJuego() {
         pelotasLanzadas = 0;
         fallos = 0; // Te perdonamos los fallos al pasar de nivel
         
-        alert(`¡NIVEL COMPLETADO! 🏆\n\nAvanzas al Nivel ${nivel}.\n¡Prepárate, la máquina lanzará más rápido!`);
+        // Diseño verde para Nivel Superado
+        modalContenido.classList.remove('modal-game-over');
+        modalTitulo.innerText = "¡NIVEL COMPLETADO!";
+        modalMensaje.innerText = `Avanzas al Nivel ${nivel}.\n¡Prepárate, la máquina lanzará más rápido!`;
+        modalBoton.innerText = "Siguiente Nivel";
         
-        juegoActivo = true;
-        actualizarHUD();
-        resetBall();
+        // Mostrar modal
+        modal.classList.remove('modal-oculto');
     } 
     // Si el juego sigue normal...
     else {
@@ -268,7 +290,6 @@ function update(delta) {
     if (juegoActivo) {
         if (!ballHit) {
             // 1. SI NO HA SIDO BATEADA (Viene hacia ti)
-            // AHORA USA LA VARIABLE "velocidadPelota" QUE CRECE CADA NIVEL
             ball.position.x += velocidadPelota * delta; 
 
             // DETECCIÓN DE GOLPE AL CUERPO
@@ -277,7 +298,6 @@ function update(delta) {
             const distanciaHorizontal = Math.sqrt(dx * dx + dz * dz);
             
             if (distanciaHorizontal < 0.6 && !isSwinging) {
-                // Te golpeó = Fallo
                 registrarFallo(); 
             }
 

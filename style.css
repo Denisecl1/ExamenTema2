@@ -1,0 +1,261 @@
+/* ================= MODAL DE JUEGO ================= */
+#gameModal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85); /* Fondo oscuro borroso */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100; /* Por encima del canvas y del HUD */
+    font-family: Arial, sans-serif;
+    backdrop-filter: blur(5px); /* Efecto cristal */
+}
+
+.modal-oculto {
+    display: none !important;
+}
+
+.modal-contenido {
+    background: #222;
+    padding: 40px;
+    border-radius: 15px;
+    border: 3px solid #4CAF50; /* Verde por defecto */
+    text-align: center;
+    color: white;
+    box-shadow: 0 0 30px rgba(76, 175, 80, 0.4);
+    max-width: 400px;
+    width: 80%;
+}
+
+.modal-contenido h1 {
+    margin-top: 0;
+    font-size: 32px;
+    letter-spacing: 2px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.modal-contenido p {
+    font-size: 20px;
+    line-height: 1.5;
+    margin-bottom: 30px;
+    color: #ddd;
+    white-space: pre-line; /* Respeta los saltos de línea del JS */
+}
+
+#modalBoton {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+}
+
+#modalBoton:hover {
+    background: #45a049;
+    transform: scale(1.05);
+}
+
+#modalBoton:active {
+    transform: scale(0.95);
+}
+
+/* ESTILO DINÁMICO PARA GAME OVER */
+.modal-game-over {
+    border-color: #ff4444 !important;
+    box-shadow: 0 0 30px rgba(255, 68, 68, 0.4) !important;
+}
+.modal-game-over #modalBoton {
+    background: #ff4444 !important;
+}
+.modal-game-over #modalBoton:hover {
+    background: #cc0000 !important;
+}
+
+/*Boton de play*/
+
+.card {
+  width: 300px;
+  height: 200px;
+  background: #243137;
+  position: relative;
+  display: grid;
+  place-content: center;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: all 0.5s ease-in-out;
+}
+
+#logo-main, #logo-second {
+  height: 100%;
+}
+
+#logo-main {
+  fill: #bd9f67;
+}
+
+#logo-second {
+  padding-bottom: 10px;
+  fill: none;
+  stroke: #bd9f67;
+  stroke-width: 1px;
+}
+
+.border {
+  position: absolute;
+  inset: 0px;
+  border: 2px solid #bd9f67;
+  opacity: 0;
+  transform: rotate(10deg);
+  transition: all 0.5s ease-in-out;
+}
+
+.bottom-text {
+  position: absolute;
+  left: 50%;
+  bottom: 13px;
+  transform: translateX(-50%);
+  font-size: 6px;
+  text-transform: uppercase;
+  padding: 0px 5px 0px 8px;
+  color: #bd9f67;
+  background: #243137;
+  opacity: 0;
+  letter-spacing: 7px;
+  transition: all 0.5s ease-in-out;
+}
+
+.content {
+  transition: all 0.5s ease-in-out;
+}
+
+.content .logo {
+  height: 35px;
+  position: relative;
+  width: 33px;
+  overflow: hidden;
+  transition: all 1s ease-in-out;
+}
+
+.content .logo .logo1 {
+  height: 33px;
+  position: absolute;
+  left: 0;
+}
+
+.content .logo .logo2 {
+  height: 33px;
+  position: absolute;
+  left: 33px;
+}
+
+.content .logo .trail {
+  position: absolute;
+  right: 0;
+  height: 100%;
+  width: 100%;
+  opacity: 0;
+}
+
+.content .logo-bottom-text {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin-top: 30px;
+  color: #bd9f67;
+  padding-left: 8px;
+  font-size: 11px;
+  opacity: 0;
+  letter-spacing: none;
+  transition: all 0.5s ease-in-out 0.5s;
+}
+
+.card:hover {
+  border-radius: 0;
+  transform: scale(1.1);
+}
+
+.card:hover .logo {
+  width: 134px;
+  animation: opacity 1s ease-in-out;
+}
+
+.card:hover .border {
+  inset: 15px;
+  opacity: 1;
+  transform: rotate(0);
+}
+
+.card:hover .bottom-text {
+  letter-spacing: 3px;
+  opacity: 1;
+  transform: translateX(-50%);
+}
+
+.card:hover .content .logo-bottom-text {
+  opacity: 1;
+  letter-spacing: 9.5px;
+}
+
+.card:hover .trail {
+  animation: trail 1s ease-in-out;
+}
+
+@keyframes opacity {
+  0% {
+    border-right: 1px solid transparent;
+  }
+
+  10% {
+    border-right: 1px solid #bd9f67;
+  }
+
+  80% {
+    border-right: 1px solid #bd9f67;
+  }
+
+  100% {
+    border-right: 1px solid transparent;
+  }
+}
+
+@keyframes trail {
+  0% {
+    background: linear-gradient(90deg, rgba(189, 159, 103, 0) 90%, rgb(189, 159, 103) 100%);
+    opacity: 0;
+  }
+
+  30% {
+    background: linear-gradient(90deg, rgba(189, 159, 103, 0) 70%, rgb(189, 159, 103) 100%);
+    opacity: 1;
+  }
+
+  70% {
+    background: linear-gradient(90deg, rgba(189, 159, 103, 0) 70%, rgb(189, 159, 103) 100%);
+    opacity: 1;
+  }
+
+  95% {
+    background: linear-gradient(90deg, rgba(189, 159, 103, 0) 90%, rgb(189, 159, 103) 100%);
+    opacity: 0;
+  }
+}
+.texto-play {
+  color: #bd9f67; /* Usamos el color dorado de tu diseño original */
+  font-size: 26px; /* Tamaño exacto para que no se salga de los 35px de alto */
+  font-weight: 900;
+  font-family: 'Arial Black', Arial, sans-serif;
+  line-height: 35px; /* Lo centra perfectamente en vertical */
+  letter-spacing: 8px; /* Separa las letras para que llene la caja al expandirse */
+  white-space: nowrap; /* ¡MUY IMPORTANTE! Evita que el texto se caiga al siguiente renglón */
+  position: absolute;
+  left: 6px; /* Lo empuja un poquito para centrar la "P" inicial */
+}
