@@ -12,7 +12,9 @@ let pelotasLanzadas = 0;
 const MAX_FALLOS = 3;   // Pierdes al fallar 3 veces
 const MAX_PELOTAS = 10; // Avanzas de nivel cada 10 pelotas
 let velocidadPelota = 12; // La velocidad inicial de la pelota
-let juegoActivo = true; // Para detener todo si perdemos
+
+let juegoActivo = false; 
+let esGameOver = false; // NUEVO: Para saber si perdimos o pasamos de nivel
 
 // ================= ESCENA, CÁMARA Y RENDER =================
 const scene = new THREE.Scene();
@@ -149,21 +151,38 @@ function resetBall() {
     ball.position.set(personaje.position.x - 15, 1.2, personaje.position.z);
 }
 
-// ================= LÓGICA DE NIVELES Y MODAL =================
+// ================= EVENTO DE PANTALLA DE INICIO =================
+const pantallaInicio = document.getElementById('pantallaInicio');
+const botonIniciar = document.getElementById('botonIniciar');
 
-// Referencias al Modal en el HTML
+botonIniciar.addEventListener('click', () => {
+    pantallaInicio.classList.add('oculto'); // Oculta la pantalla de inicio
+    juegoActivo = true; // Activa las mecánicas
+    resetBall(); // Lanza la primera bola
+});
+
+// ================= LÓGICA DE NIVELES Y MODAL =================
 const modal = document.getElementById('gameModal');
 const modalTitulo = document.getElementById('modalTitulo');
 const modalMensaje = document.getElementById('modalMensaje');
 const modalBoton = document.getElementById('modalBoton');
 const modalContenido = document.querySelector('.modal-contenido');
 
-// Evento del botón del Modal para reiniciar/continuar
 modalBoton.addEventListener('click', () => {
-    modal.classList.add('modal-oculto'); // Ocultar ventana
-    juegoActivo = true;                  // Reactivar controles
-    actualizarHUD();                     // Refrescar textos en pantalla
-    resetBall();                         // Lanzar nueva pelota
+    modal.classList.add('modal-oculto'); // Ocultar ventana emergente
+    
+    // NUEVO: Verificamos si habíamos perdido
+    if (esGameOver) {
+        // Mostramos de nuevo la pantalla de PLAY inicial
+        pantallaInicio.classList.remove('oculto');
+        // No activamos el juego aquí, de eso se encarga la tarjeta PLAY
+    } else {
+        // Si solo pasamos de nivel, el juego sigue sin pausas
+        juegoActivo = true;                  
+        resetBall();                         
+    }
+    
+    actualizarHUD(); 
 });
 
 function actualizarHUD() {
@@ -177,14 +196,13 @@ function verificarEstadoJuego() {
     // Si perdemos...
     if (fallos >= MAX_FALLOS) {
         juegoActivo = false;
+        esGameOver = true; // Marcamos que el modal es por Game Over
         
-        // Diseño rojo para Game Over
         modalContenido.classList.add('modal-game-over');
         modalTitulo.innerText = "¡GAME OVER!";
         modalMensaje.innerText = `Llegaste al Nivel: ${nivel}\nTu Score Final: ${score}`;
         modalBoton.innerText = "Reintentar";
         
-        // Mostrar modal
         modal.classList.remove('modal-oculto');
         
         // Reiniciar variables para la siguiente partida
@@ -192,26 +210,25 @@ function verificarEstadoJuego() {
         score = 0;
         fallos = 0;
         pelotasLanzadas = 0;
-        velocidadPelota = 12; // Volver a velocidad normal
+        velocidadPelota = 12; 
     } 
     // Si ganamos el nivel...
     else if (pelotasLanzadas >= MAX_PELOTAS) {
         juegoActivo = false;
-        nivel++;
-        velocidadPelota += 4; // ¡AUMENTAMOS LA VELOCIDAD DE LA PELOTA!
-        pelotasLanzadas = 0;
-        fallos = 0; // Te perdonamos los fallos al pasar de nivel
+        esGameOver = false; // Marcamos que el modal es por Nivel Superado
         
-        // Diseño verde para Nivel Superado
+        nivel++;
+        velocidadPelota += 4; 
+        pelotasLanzadas = 0;
+        fallos = 0; 
+        
         modalContenido.classList.remove('modal-game-over');
         modalTitulo.innerText = "¡NIVEL COMPLETADO!";
         modalMensaje.innerText = `Avanzas al Nivel ${nivel}.\n¡Prepárate, la máquina lanzará más rápido!`;
         modalBoton.innerText = "Siguiente Nivel";
         
-        // Mostrar modal
         modal.classList.remove('modal-oculto');
     } 
-    // Si el juego sigue normal...
     else {
         resetBall();
     }
@@ -242,7 +259,7 @@ function checkHit() {
 
     if (distanciaHorizontal < 2.0) { 
         score++;
-        actualizarHUD(); // Actualizamos solo el score al batear
+        actualizarHUD(); 
         
         ballHit = true;
         ballVelocity.x = - (15 + Math.random() * 10); 
@@ -259,7 +276,6 @@ function update(delta) {
 
     let moving = false;
 
-    // Movimiento (solo si el juego está activo)
     if (juegoActivo) {
         if (keys['a'] || keys['arrowleft']) {
             personaje.position.z += 4 * delta;
@@ -272,7 +288,6 @@ function update(delta) {
         }
     }
 
-    // Animación de Swing
     if (isSwinging) {
         swingTime += delta;
         if (swingTime > 0.15 && swingTime < 0.35) {
@@ -286,13 +301,10 @@ function update(delta) {
         setAction('idle');
     }
 
-    // ================= MOVIMIENTO DE LA PELOTA =================
     if (juegoActivo) {
         if (!ballHit) {
-            // 1. SI NO HA SIDO BATEADA (Viene hacia ti)
             ball.position.x += velocidadPelota * delta; 
 
-            // DETECCIÓN DE GOLPE AL CUERPO
             const dx = personaje.position.x - ball.position.x;
             const dz = personaje.position.z - ball.position.z;
             const distanciaHorizontal = Math.sqrt(dx * dx + dz * dz);
@@ -301,27 +313,23 @@ function update(delta) {
                 registrarFallo(); 
             }
 
-            // Si pasa al jugador sin ser bateada = Fallo (Strike)
             if (ball.position.x > personaje.position.x + 2) {
                 registrarFallo();
             }
 
         } else {
-            // 2. SI YA FUE BATEADA (Vuela)
             ball.position.x += ballVelocity.x * delta;
             ball.position.y += ballVelocity.y * delta;
             ball.position.z += ballVelocity.z * delta;
 
-            ballVelocity.y -= 15 * delta; // Gravedad
+            ballVelocity.y -= 15 * delta; 
 
-            // Si la pelota toca el suelo (cae en el pasto) = Acierto completado
             if (ball.position.y < -0.8) {
                 registrarAcierto(); 
             }
         }
     }
 
-    // Cámara
     camera.position.x = personaje.position.x + 5;
     camera.position.y = personaje.position.y + 4;
     camera.position.z = personaje.position.z;
