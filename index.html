@@ -5,7 +5,6 @@
     <title>Simulador de Bateo 3D</title>
     
     <link rel="icon" type="image/png" href="./Textura/fav.png">
-    
     <link rel="stylesheet" href="style.css">
 
     <style>
@@ -104,6 +103,7 @@
             <ul class="lista-instrucciones">
                 <li>⬅️ ➡️ Usa las teclas <b>A</b> y <b>D</b> para moverte a los lados.</li>
                 <li>🖱️ Haz <b>Clic Izquierdo</b> en el momento justo para batear.</li>
+                <li>⏸️ Presiona la tecla <b>P</b> para pausar el juego en cualquier momento.</li>
                 <li>⚠️ Si dejas pasar la pelota o te golpea, sumas un <b>Fallo</b>.</li>
                 <li>❌ A los 3 fallos pierdes el juego.</li>
             </ul>
@@ -116,6 +116,14 @@
             <h1 id="modalTitulo">TÍTULO</h1>
             <p id="modalMensaje">Mensaje del juego aquí...</p>
             <button id="modalBoton">Continuar</button>
+        </div>
+    </div>
+
+    <div id="pausaModal" class="modal-oculto">
+        <div class="modal-contenido modal-pausa">
+            <h1 style="color: #f09819;">PAUSA</h1>
+            <p>El juego está en pausa.<br>Presiona "P" o el botón para continuar.</p>
+            <button id="btnReanudar" class="button">REANUDAR</button>
         </div>
     </div>
 

@@ -16,6 +16,7 @@ let velocidadPelota = 12;
 let juegoActivo = false;
 let esGameOver = false;
 let isDancing = false;
+let isPaused = false; // 🔥 NUEVA VARIABLE DE PAUSA
 
 // ================= ESCENA Y ENTORNO 3D =================
 const scene = new THREE.Scene();
@@ -175,8 +176,43 @@ function setAction(name) {
 
 // ================= CONTROLES Y PAUSAS =================
 const keys = {};
-window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+
+// 🔥 AQUÍ AGREGAMOS LA FUNCIÓN DE LA TECLA "P" Y EL BOTÓN "REANUDAR" 🔥
+const pausaModal = document.getElementById('pausaModal');
+const btnReanudar = document.getElementById('btnReanudar');
+
+window.addEventListener('keydown', e => {
+    const key = e.key.toLowerCase();
+    keys[key] = true;
+    
+    // Si presiona 'p' y el juego ha iniciado (no en Game Over, ni Bailando)
+    if (key === 'p' && !esGameOver && !isDancing) {
+        if (juegoActivo) {
+            // Activar pausa
+            juegoActivo = false;
+            isPaused = true;
+            if (pausaModal) pausaModal.classList.remove('modal-oculto');
+        } else if (isPaused) {
+            // Desactivar pausa
+            isPaused = false;
+            juegoActivo = true;
+            if (pausaModal) pausaModal.classList.add('modal-oculto');
+        }
+    }
+});
+
 window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+// Evento para tu botón de "REANUDAR" con gradiente
+if (btnReanudar) {
+    btnReanudar.addEventListener('click', () => {
+        if (isPaused) {
+            isPaused = false;
+            juegoActivo = true;
+            pausaModal.classList.add('modal-oculto');
+        }
+    });
+}
 
 let isSwinging = false;
 let swingTime = 0;
@@ -189,7 +225,7 @@ window.addEventListener('mousedown', () => {
     }
 });
 
-// 🔥 PAUSA DE INSTRUCCIONES
+// PAUSA DE INSTRUCCIONES
 const btnInstrucciones = document.getElementById('btnInstrucciones');
 const instruccionesModal = document.getElementById('instruccionesModal');
 const cerrarInstrucciones = document.getElementById('cerrarInstrucciones');
@@ -383,7 +419,7 @@ function update(delta) {
             isSwinging = false;
             setAction('idle');
         }
-    } else if (!moving) {
+    } else if (!moving && !isDancing) {
         setAction('idle');
     }
 
@@ -416,7 +452,7 @@ function update(delta) {
         }
     }
 
-    // 🔥 MODIFICACIÓN DE CÁMARA PARA VER LA MÁQUINA
+    // MODIFICACIÓN DE CÁMARA
     camera.position.x = personaje.position.x + 9;
     camera.position.y = personaje.position.y + 4.5;
     camera.position.z = personaje.position.z;
