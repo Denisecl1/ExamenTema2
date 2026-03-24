@@ -1,5 +1,5 @@
-/* ================= MODAL DE JUEGO ================= */
-#gameModal {
+/* ================= MODAL DE JUEGO Y PAUSA ================= */
+#gameModal, #pausaModal {
     position: absolute;
     top: 0;
     left: 0;
@@ -12,6 +12,11 @@
     z-index: 100; /* Por encima del canvas y del HUD */
     font-family: Arial, sans-serif;
     backdrop-filter: blur(5px); /* Efecto cristal */
+}
+
+/* El modal de pausa va un poquito más arriba para que tape todo */
+#pausaModal {
+    z-index: 150; 
 }
 
 .modal-oculto {
@@ -28,6 +33,10 @@
     box-shadow: 0 0 30px rgba(76, 175, 80, 0.4);
     max-width: 400px;
     width: 80%;
+    /* Aseguramos que el contenido extra (como el botón con overflow) no rompa la caja */
+    display: flex;
+    flex-direction: column;
+    align-items: center; 
 }
 
 .modal-contenido h1 {
@@ -68,24 +77,26 @@
 }
 
 /* ================= ESTILO DINÁMICO PARA GAME OVER ================= */
-/* =======================================================
-   ESTILO DINÁMICO PARA GAME OVER (EL ROJO)
-   ======================================================= */
-/* Usamos el selector combinado de clases para máxima fuerza */
 .modal-contenido.modal-game-over {
     border-color: #ff4444; /* Borde rojo */
     box-shadow: 0 0 30px rgba(255, 68, 68, 0.4); /* Brillo rojo */
 }
 
-/* Selector específico para el botón dentro del Game Over */
 .modal-game-over #modalBoton {
     background: #ff4444; /* Botón rojo */
-    color: white; /* Aseguramos texto blanco */
+    color: white; 
 }
 
 .modal-game-over #modalBoton:hover {
-    background: #cc0000; /* Rojo más oscuro al pasar el ratón */
+    background: #cc0000; 
 }
+
+/* ESTILO DINÁMICO PARA PAUSA */
+.modal-pausa {
+    border-color: #f09819 !important;
+    box-shadow: 0 0 30px rgba(240, 152, 25, 0.4) !important;
+}
+
 /* ================= BOTÓN DE PLAY (TARJETA) ================= */
 .card {
   width: 300px;
@@ -180,7 +191,7 @@
   padding-left: 8px;
   font-size: 11px;
   opacity: 0;
-  letter-spacing: none;
+  letter-spacing: normal;
   transition: all 0.5s ease-in-out 0.5s;
 }
 
@@ -363,7 +374,7 @@
 /* ================= BOTÓN DE PAUSA (TU DISEÑO) ================= */
 .button {
   position: relative;
-  padding: 15px 40px; /* Ajusté un poco el padding para que coincida con tus otros botones */
+  padding: 15px 40px; 
   font-size: 18px;
   font-weight: bold;
   border-radius: 6px;
@@ -373,6 +384,7 @@
   background-image: linear-gradient(-60deg, #ff5858 0%, #f09819 100%);
   transition: all 0.2s ease;
   text-transform: uppercase;
+  z-index: 10; /* Asegura que el botón esté sobre las burbujas */
 }
 
 .button:active {
@@ -387,7 +399,7 @@
   left: 50%;
   height: 100%;
   transform: translateX(-50%);
-  z-index: -1000;
+  z-index: -1; /* Pone las burbujas detrás del botón pero dentro de la caja visible */
   background-repeat: no-repeat;
 }
 
@@ -432,4 +444,32 @@
   0% { background-position: 10% -10%, 30% 10%, 55% -10%, 70% -10%, 85% -10%, 70% -10%, 70% 0%; }
   50% { background-position: 0% 80%, 20% 80%, 45% 60%, 60% 100%, 75% 70%, 95% 60%, 105% 0%; }
   100% { background-position: 0% 90%, 20% 90%, 45% 70%, 60% 110%, 75% 80%, 95% 70%, 110% 10%; background-size: 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%, 0% 0%; }
+}
+
+/* ================= RECORDATORIO DE PAUSA ================= */
+#pausaReminder {
+    position: absolute;
+    top: 80px;         /* A la misma altura que tu panel de Score */
+    right: 20px;       /* Pegado a la derecha */
+    background: rgba(36, 49, 55, 0.8);
+    color: #bd9f67;
+    padding: 10px 15px;
+    border-radius: 8px;
+    border: 1px solid rgba(189, 159, 103, 0.5);
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    z-index: 10;
+    user-select: none;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+    letter-spacing: 1px;
+}
+
+/* Estilo para que la letra "P" parezca una tecla de computadora */
+#pausaReminder b {
+    color: #fff;
+    background: #555;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border-bottom: 2px solid #222;
+    margin: 0 4px;
 }
